@@ -168,7 +168,15 @@ async def main() -> int:
 
     notifier = TelegramNotifier()
     if not notifier.is_configured():
-        print("Telegram nie jest skonfigurowany — sprawdź TELEGRAM_BOT_TOKEN i TELEGRAM_CHAT_ID.")
+        print("=" * 64)
+        print("  Telegram nie jest skonfigurowany — nie mam dokąd wysłać.")
+        print("")
+        print(f"  TELEGRAM_BOT_TOKEN: {'ustawiony' if settings.telegram_bot_token else 'PUSTY'}")
+        print(f"  TELEGRAM_CHAT_ID:   {settings.telegram_chat_id or 'PUSTY'}")
+        print("")
+        print("  Lokalnie: uzupełnij te wartości w pliku .env")
+        print("  W chmurze: Settings → Secrets and variables → Actions → Secrets")
+        print("=" * 64)
         print("\nTreść, która miała pójść:\n")
         print(text)
         return 1

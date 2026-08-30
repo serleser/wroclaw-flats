@@ -7,6 +7,8 @@ Pod wiadomością dodajemy przyciski: "Otwórz ofertę" i "Do ulubionych".
 from __future__ import annotations
 
 import logging
+import os
+import re
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -17,7 +19,13 @@ from .base import BaseNotifier, build_message, build_message_html
 
 log = logging.getLogger("notifier.telegram")
 
-API = "https://api.telegram.org/bot{token}/{method}"
+#: adres API — podmienialny zmienną środowiskową, żeby dało się przetestować
+#: wysyłkę bez zaczepiania prawdziwego Telegrama
+API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org")
+API = API_BASE + "/bot{token}/{method}"
+
+#: poprawny token BotFathera: cyfry, dwukropek, ciąg liter/cyfr/myślników
+TOKEN_RE = re.compile(r"^\d{6,}:[\w-]{20,}$")
 
 
 class TelegramNotifier(BaseNotifier):
@@ -29,12 +37,25 @@ class TelegramNotifier(BaseNotifier):
     # ------------------------------------------------------------------
 
     async def _call(self, method: str, payload: Dict[str, Any]) -> bool:
-        url = API.format(token=settings.telegram_bot_token, method=method)
+        token = settings.telegram_bot_token.strip()
+        if not TOKEN_RE.match(token):
+            log.error(
+                "Telegram: token ma nieprawidłowy kształt (%s znaków). "
+                "Powinien wyglądać tak: 8123456789:AAHx1k... — same cyfry, dwukropek, "
+                "potem litery i cyfry. Sprawdź, czy nie wkradła się spacja albo złamanie wiersza.",
+                len(token),
+            )
+            return False
+
+        url = API.format(token=token, method=method)
         try:
             async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.post(url, json=payload)
-        except httpx.HTTPError as exc:
-            log.error("Telegram: błąd sieci — %s", exc)
+        except Exception as exc:  # noqa: BLE001
+            # Łapiemy szeroko: poza błędami sieci zdarzają się też błędy budowy
+            # adresu (np. niewidoczny znak w tokenie), które nie są HTTPError
+            # i bez tego wywracały cały cykl zamiast pominąć jedną wysyłkę.
+            log.error("Telegram: nie udało się wysłać (%s) — %s", type(exc).__name__, exc)
             return False
 
         if resp.status_code == 200 and resp.json().get("ok"):

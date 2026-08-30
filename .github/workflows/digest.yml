@@ -47,6 +47,28 @@ jobs:
       - name: Instalacja zależności
         run: pip install -r requirements.txt
 
+      - name: Sprawdź konfigurację
+        run: |
+          BRAK=""
+          [ -z "$DATABASE_URL" ]       && BRAK="$BRAK DATABASE_URL"
+          [ -z "$TELEGRAM_BOT_TOKEN" ] && BRAK="$BRAK TELEGRAM_BOT_TOKEN"
+          [ -z "$TELEGRAM_CHAT_ID" ]   && BRAK="$BRAK TELEGRAM_CHAT_ID"
+          if [ -n "$BRAK" ]; then
+            echo "::error::Brakuje sekretow:$BRAK"
+            echo ""
+            echo "Dodaj je na GitHubie: Settings -> Secrets and variables -> Actions"
+            echo "-> zakladka Secrets -> New repository secret."
+            echo "Nazwy musza sie zgadzac co do znaku, wielkimi literami."
+            exit 1
+          fi
+          echo "Sekrety na miejscu."
+          echo "  DATABASE_URL: ${#DATABASE_URL} znakow"
+          echo "  TELEGRAM_CHAT_ID: $TELEGRAM_CHAT_ID"
+          case "$DATABASE_URL" in
+            postgresql*) echo "  Baza: PostgreSQL - OK" ;;
+            *) echo "::warning::DATABASE_URL nie wyglada na adres PostgreSQL" ;;
+          esac
+
       - name: Wyślij podsumowanie
         run: |
           python -m app.tools.digest \

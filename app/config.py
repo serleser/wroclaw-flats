@@ -66,6 +66,21 @@ class Settings(BaseSettings):
     # zostanie oznaczone jako "okazja" względem wrocławskiej mediany.
     strict_city_filter: bool = True
 
+    @field_validator("*", mode="before")
+    @classmethod
+    def _strip_whitespace(cls, value):
+        """Ucina białe znaki ze wszystkich ustawień tekstowych.
+
+        Powód z życia: token wklejony do sekretu na GitHubie potrafi mieć na końcu
+        znak nowej linii. Token trafia potem prosto do adresu URL, a ten nie może
+        zawierać złamania wiersza — wysyłka wywala się błędem, którego treść
+        („Invalid non-printable ASCII character”) niczego nie tłumaczy.
+        Jeden strip w jednym miejscu zamyka całą tę klasę problemów.
+        """
+        if isinstance(value, str):
+            return value.strip().strip('"').strip("'").strip()
+        return value
+
     @field_validator("database_url")
     @classmethod
     def _use_modern_postgres_driver(cls, value: str) -> str:

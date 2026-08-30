@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -64,6 +65,24 @@ class Settings(BaseSettings):
     # sytuacją, w której portal zwróci wyniki z całej Polski, a tańsze miasto
     # zostanie oznaczone jako "okazja" względem wrocławskiej mediany.
     strict_city_filter: bool = True
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_modern_postgres_driver(cls, value: str) -> str:
+        """Dopisuje sterownik do adresu Postgresa, jeśli go brakuje.
+
+        Neon (i większość hostingów) podaje adres w postaci `postgresql://...`.
+        SQLAlchemy sięga wtedy po sterownik psycopg2, którego nie instalujemy —
+        i start kończy się błędem „No module named 'psycopg2'”. Zamiast wymagać,
+        żeby każdy pamiętał o ręcznej podmianie, robimy to tutaj raz.
+        """
+        text = value.strip().strip('"').strip("'")
+        for prefix in ("postgresql://", "postgres://"):
+            if text.startswith(prefix):
+                return "postgresql+psycopg://" + text[len(prefix):]
+        if text.startswith("postgresql+psycopg2://"):
+            return "postgresql+psycopg://" + text[len("postgresql+psycopg2://"):]
+        return text
 
     @property
     def sources(self) -> List[str]:

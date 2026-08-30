@@ -1,0 +1,54 @@
+name: Podsumowanie dnia
+
+# Codzienny przegląd tego, co przybyło — jedna wiadomość na Telegramie zamiast
+# przeglądania dashboardu. Alerty na bieżąco to osobny workflow (scrape.yml).
+#
+# Cron liczy się w UTC. Polska latem to UTC+2, zimą UTC+1, więc godziny
+# wysyłki przesuną się o godzinę po zmianie czasu — nic się nie psuje,
+# ale jeśli chcesz to wyrównać, przestaw wartości poniżej.
+on:
+  schedule:
+    - cron: "0 6 * * *"     # 08:00 czasu polskiego (latem)
+    - cron: "0 17 * * *"    # 19:00 czasu polskiego (latem)
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Za ile ostatnich godzin podsumować"
+        required: false
+        default: "24"
+      limit:
+        description: "Ile ofert wypisać"
+        required: false
+        default: "8"
+
+concurrency:
+  group: digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      SCHEDULER_ENABLED: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalacja zależności
+        run: pip install -r requirements.txt
+
+      - name: Wyślij podsumowanie
+        run: |
+          python -m app.tools.digest \
+            --hours "${{ github.event.inputs.hours || '24' }}" \
+            --limit "${{ github.event.inputs.limit || '8' }}"

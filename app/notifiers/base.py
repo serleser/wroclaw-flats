@@ -19,6 +19,19 @@ def fmt_area(value: Optional[float]) -> str:
     return f"{value:.1f} m²".replace(".", ",") if value else "—"
 
 
+def esc_html(text: Optional[str]) -> str:
+    """Escapowanie pod tryb HTML Telegrama.
+
+    Bez tego tytuł zawierający znak < albo & wywala wysyłkę błędem
+    „can't parse entities”, a powiadomienie przepada bez śladu.
+    """
+    if not text:
+        return ""
+    return (
+        str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    )
+
+
 MARKET_LABELS = {"pierwotny": "rynek pierwotny", "wtorny": "rynek wtórny"}
 SELLER_LABELS = {
     "wlasciciel": "właściciel",
@@ -86,6 +99,65 @@ def build_message(listing: Listing, saved_filter: Optional[SavedFilter] = None) 
     lines.append("")
     lines.append(f"🔗 {listing.url}")
     lines.append(f"_źródło: {listing.source}_")
+    return "\n".join(lines)
+
+
+def build_message_html(listing: Listing, saved_filter: Optional[SavedFilter] = None) -> str:
+    """Ta sama treść co build_message, ale w HTML — bezpieczniejszym dla Telegrama.
+
+    Markdown wywracał się na tytułach zawierających podkreślnik albo gwiazdkę,
+    a takie na portalach się zdarzają.
+    """
+    lines: List[str] = []
+
+    header = "🔥 <b>OKAZJA</b>" if listing.is_deal else "🏠 <b>Nowa oferta</b>"
+    if saved_filter:
+        header += f" · {esc_html(saved_filter.name)}"
+    lines.append(header)
+    lines.append("")
+    lines.append(f"<b>{esc_html(listing.title[:150])}</b>")
+    lines.append("")
+
+    price_line = f"💰 <b>{fmt_pln(listing.price)}</b>"
+    if listing.price_per_m2:
+        price_line += f"  ({fmt_pln(listing.price_per_m2)}/m²)"
+    lines.append(price_line)
+
+    specs = [fmt_area(listing.area)]
+    if listing.rooms:
+        specs.append(f"{listing.rooms} pok.")
+    if listing.floor is not None:
+        specs.append("parter" if listing.floor == 0 else f"{listing.floor} piętro")
+    lines.append("📐 " + " · ".join(specs))
+
+    location = listing.estate or listing.region or listing.location_raw or "Wrocław"
+    lines.append(f"📍 {esc_html(location)}")
+
+    meta = []
+    if listing.market:
+        meta.append(MARKET_LABELS.get(listing.market, listing.market))
+    if listing.seller_type:
+        meta.append(SELLER_LABELS.get(listing.seller_type, listing.seller_type))
+    if listing.condition and listing.condition != "nieokreslony":
+        meta.append(CONDITION_LABELS.get(listing.condition, listing.condition))
+    if meta:
+        lines.append("🏷 " + esc_html(" · ".join(meta)))
+
+    if listing.is_deal and listing.deal_score:
+        lines.append(f"📉 {listing.deal_score:.0f}% poniżej mediany dla {esc_html(location)}")
+
+    if listing.features:
+        nice = {
+            "balkon": "balkon", "taras": "taras", "ogrodek": "ogródek", "garaz": "garaż",
+            "winda": "winda", "piwnica": "piwnica", "komorka": "komórka",
+            "ksiega_wieczysta": "KW", "bez_prowizji": "bez prowizji",
+        }
+        tags = [nice[f] for f in listing.features if f in nice]
+        if tags:
+            lines.append("✅ " + ", ".join(tags))
+
+    lines.append("")
+    lines.append(f'<a href="{esc_html(listing.url)}">Otwórz ogłoszenie</a>  ·  <i>{esc_html(listing.source)}</i>')
     return "\n".join(lines)
 
 

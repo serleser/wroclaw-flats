@@ -13,7 +13,7 @@ import httpx
 
 from ..config import settings
 from ..models import Listing, SavedFilter
-from .base import BaseNotifier, build_message
+from .base import BaseNotifier, build_message, build_message_html
 
 log = logging.getLogger("notifier.telegram")
 
@@ -56,7 +56,8 @@ class TelegramNotifier(BaseNotifier):
     # ------------------------------------------------------------------
 
     async def send(self, listing: Listing, saved_filter: Optional[SavedFilter] = None) -> None:
-        text = build_message(listing, saved_filter)
+        html = build_message_html(listing, saved_filter)
+        plain = build_message(listing, saved_filter)
         errors: List[str] = []
 
         for chat_id in settings.telegram_chat_ids:
@@ -67,8 +68,8 @@ class TelegramNotifier(BaseNotifier):
                     {
                         "chat_id": chat_id,
                         "photo": listing.image_url,
-                        "caption": text[:1024],
-                        "parse_mode": "Markdown",
+                        "caption": html[:1024],
+                        "parse_mode": "HTML",
                         "reply_markup": self._keyboard(listing),
                     },
                 )
@@ -77,11 +78,18 @@ class TelegramNotifier(BaseNotifier):
                     "sendMessage",
                     {
                         "chat_id": chat_id,
-                        "text": text[:4096],
-                        "parse_mode": "Markdown",
+                        "text": html[:4096],
+                        "parse_mode": "HTML",
                         "disable_web_page_preview": False,
                         "reply_markup": self._keyboard(listing),
                     },
+                )
+            if not sent:
+                # Ostatnia deska ratunku: bez formatowania. Lepiej dostać brzydkie
+                # powiadomienie niż nie dostać żadnego.
+                sent = await self._call(
+                    "sendMessage",
+                    {"chat_id": chat_id, "text": plain[:4096], "disable_web_page_preview": False},
                 )
             if not sent:
                 errors.append(chat_id)
@@ -89,9 +97,15 @@ class TelegramNotifier(BaseNotifier):
         if errors:
             raise RuntimeError(f"Telegram: nie wysłano do {', '.join(errors)}")
 
-    async def send_text(self, text: str) -> None:
+    async def send_text(self, text: str, html: bool = True) -> None:
         for chat_id in settings.telegram_chat_ids:
-            await self._call(
-                "sendMessage",
-                {"chat_id": chat_id, "text": text[:4096], "parse_mode": "Markdown"},
-            )
+            payload = {
+                "chat_id": chat_id,
+                "text": text[:4096],
+                "disable_web_page_preview": True,
+            }
+            if html:
+                payload["parse_mode"] = "HTML"
+            if not await self._call("sendMessage", payload):
+                payload.pop("parse_mode", None)
+                await self._call("sendMessage", payload)

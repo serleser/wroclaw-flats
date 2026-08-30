@@ -1,0 +1,26 @@
+name: Keepalive (nie pozwól GitHubowi wyłączyć crona)
+
+# GitHub automatycznie WYŁĄCZA zaplanowane workflow w repozytorium,
+# w którym przez 60 dni nie było żadnej aktywności. Ten workflow raz w tygodniu
+# robi pusty commit — repo jest "żywe", a scrapowanie nie zatrzyma się po dwóch
+# miesiącach szukania mieszkania (a szukanie zwykle tyle trwa).
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"        # poniedziałki 04:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pusty commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "keepalive: podtrzymanie harmonogramu scrapowania"
+          git push

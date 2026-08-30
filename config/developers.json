@@ -1,0 +1,54 @@
+{
+  "_komentarz": [
+    "Konfiguracja scrapera rynku pierwotnego (app/scrapers/developers.py).",
+    "Wpisy poniżej są PRZYKŁADOWE — podmień 'url' na realne strony list mieszkań",
+    "wrocławskich deweloperów i ustaw enabled=true. Żeby sprawdzić, którego trybu",
+    "użyć, otwórz stronę i poszukaj w źródle 'application/ld+json' (mode=jsonld),",
+    "tabeli mieszkań (mode=table) albo zapytania do /api/ w zakładce Network (mode=api).",
+    "Potem: python -m app.tools.probe developers --debug"
+  ],
+  "developers": [
+    {
+      "key": "przyklad_jsonld",
+      "name": "Przykładowy deweloper — inwestycja A",
+      "url": "https://przyklad-dewelopera.pl/mieszkania/",
+      "mode": "jsonld",
+      "estate": "Jagodno",
+      "enabled": false
+    },
+    {
+      "key": "przyklad_tabela",
+      "name": "Przykładowy deweloper — inwestycja B",
+      "url": "https://inny-deweloper.pl/lista-mieszkan",
+      "mode": "table",
+      "estate": "Maślice",
+      "enabled": false,
+      "table": {
+        "row": "table.mieszkania tbody tr",
+        "label": "td:nth-child(1)",
+        "area": "td:nth-child(2)",
+        "rooms": "td:nth-child(3)",
+        "floor": "td:nth-child(4)",
+        "price": "td:nth-child(5)",
+        "link": "a"
+      }
+    },
+    {
+      "key": "przyklad_api",
+      "name": "Przykładowy deweloper — inwestycja C",
+      "url": "https://trzeci-deweloper.pl/oferta",
+      "api_url": "https://trzeci-deweloper.pl/api/flats?status=available",
+      "mode": "api",
+      "estate": "Klecina",
+      "enabled": false,
+      "map": {
+        "id": "number",
+        "area": "area",
+        "rooms": "rooms",
+        "floor": "floor",
+        "price": "price",
+        "url": "detailUrl"
+      }
+    }
+  ]
+}

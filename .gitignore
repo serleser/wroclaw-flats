@@ -1,0 +1,30 @@
+# --- sekrety: NIGDY nie commituj ---
+.env
+.env.local
+
+# --- dane lokalne ---
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/debug/
+data/fb_profile/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# --- system / edytory ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- pomocnicze ---
+summary.json
+*.log

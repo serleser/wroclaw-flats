@@ -1,0 +1,29 @@
+# --- Core ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# --- DB ---
+SQLAlchemy==2.0.36
+# Sterownik PostgreSQL — potrzebny dla Neona (tryb chmurowy).
+# Lokalnie na SQLite jest nieużywany, ale nie przeszkadza.
+psycopg[binary]==3.2.3
+
+# --- HTTP / scraping ---
+httpx[http2]==0.28.1
+selectolax==0.3.27          # bardzo szybki parser HTML (zamiennik BeautifulSoup)
+lxml==5.3.0
+tenacity==9.0.0             # retry z backoffem
+
+# Podszywanie się pod przeglądarkę na poziomie TLS — lekarstwo na błędy 403.
+# Portale rozpoznają boty po "odcisku palca" połączenia szyfrowanego, którego
+# zwykłe biblioteki HTTP nie potrafią podrobić. Bez tego OLX i Morizon blokują.
+curl_cffi>=0.7
+
+# --- Scheduler ---
+APScheduler==3.11.0
+
+# --- Opcjonalnie: strony renderowane JS (deweloperzy, FB) ---
+# playwright==1.49.1        # po instalacji: playwright install chromium
